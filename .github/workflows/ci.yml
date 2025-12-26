@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: user_management
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/user_management
+      JWT_SECRET: ci-secret
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8080
+      ACCESS_TOKEN_MINUTES: 15
+      REFRESH_TOKEN_DAYS: 7
+      RUST_LOG: info
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Run fmt
+        run: cargo fmt --check
+      - name: Run clippy
+        run: cargo clippy -- -D warnings
+      - name: Run tests
+        run: cargo test
